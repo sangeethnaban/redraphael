@@ -116,6 +116,8 @@ window.Raphael && (window.Raphael.define && function (R) {
                     top.dropshadow(dx, -dy, spread, color);
                     side.dropshadow(dx, -dy, spread, color);
                 }
+                //top.shadow(true);
+                //side.shadow(true);
 
                 return false;
             },
