@@ -280,5 +280,114 @@ window.Raphael && (window.Raphael.define && function (R) {
         };
     }
 
+    // For VML based browsers, there is a single implementation across IE 6-8.
+    // As such, it requires only a single implementation.
+    else if (R.vml) {
+
+        R.ca['drop-shadow'] = function (offX, offY, spread, color, scale, group) {
+            var o = this,
+                shadow = o._.shadow,
+                style,
+                filter,
+                opacity;
+
+            // do not apply shadow on shadow!
+            if (o.isShadow) {
+                return false;
+            }
+
+            if (offX === NONE) {
+                shadow && (shadow = o._.shadow = shadow.remove());
+            }
+            else {
+                if (!shadow) {
+
+                    shadow = o._.shadow = o.clone();
+                    // while adding to separate shadow group, we cannot mark the
+                    // shadow as stalker as that would break the shadow away from
+                    // shadow group and insert it before the main element.
+                    group &&
+                        group.appendChild(shadow.follow(o)) ||
+                        shadow.follow(o, undefined, 'before');
+
+                    shadow.attr({
+                        fill: 'none',
+                        'fill-opacity': 0.5,
+                        'stroke-opacity': 1
+                    }).isShadow = true;
+
+                    if (shadow.attr(STROKE_WIDTH) <= 0) {
+                        shadow.attr(STROKE_WIDTH, 1);
+                    }
+                }
+
+                style = shadow.node.runtimeStyle;
+                filter = style.filter.replace(/ progid:\S+Blur\([^\)]+\)/g, EMP);
+
+                color = R.color(color);
+                if (color.error) {
+                    color = R.color(BLACK);
+                }
+                opacity = R.pick(color.opacity, 1) / 5;
+
+                if (scale instanceof Array) {
+                    tScale = scale[0];
+                }
+                else {
+                    tScale = scale;
+                }
+
+                var tScale = 1 / R.pick(scale, 1);
+
+                offX = R.pick(offX, 1) * tScale;
+                offY = R.pick(offY, 1) * tScale;
+
+                shadow.translate(offX, offY);
+                style.filter = filter +
+                    " progid:DXImageTransform.Microsoft.Blur(pixelRadius=" +
+                    toFloat(spread * .4) + " makeShadow=True Color=" +
+                    color.hex + " shadowOpacity='" + opacity + "');";
+            }
+
+            return false;
+        };
+
+        /**
+         * Add or remove a shadow composition to the element.
+         *
+         * @param {Boolean} apply
+         * @param {Number} opacity
+         */
+        R.el.shadow = function (apply, opacity, scale, group) {
+            var o = this;
+
+            // allow alternative polymorphism in last two parameters
+            if (scale && scale.constructor === R.el.constructor) {
+                group = scale;
+                scale = undefined;
+            }
+
+            // In case the parameter is provided in object style then expand it
+            if (typeof apply === 'object') {
+                opacity && opacity.type === 'group' && (group = opacity);
+                opacity = apply.opacity;
+                scale = apply.scalefactor;
+                apply = apply.apply === undefined ? !!opacity : apply.apply;
+            }
+
+            // In case opacity is undefined, set it to full.
+            (opacity === undefined) && (opacity = 1);
+
+            return o.attr(DROP_SHADOW, apply || !opacity ?
+                [1, 1, 5, 'rgba(64,64,64,' + (opacity) + ')', scale, group] : NONE);
+
+        };
+    }
+    else if (R.canvas) {
+        R.el.shadow = function () {
+            return this;
+        };
+    }
+
 
 })(window.Raphael);
